@@ -7,22 +7,20 @@ module RubyLLM
       include Bedrock::Auth
       include Bedrock::Models
 
-      protocol :converse, Protocols::Converse, batches: Protocols::Converse::Batches
-      protocol :mantle_anthropic, Bedrock::Mantle::Anthropic
-      protocol :mantle_responses, Bedrock::Mantle::Responses
-      protocol :mantle_chat_completions, Bedrock::Mantle::ChatCompletions
-      protocol :voxtral_transcription, Bedrock::Mantle::Voxtral
-      protocol :titan_text_embeddings, Protocols::InvokeModel::TitanTextEmbeddings,
-               batches: Protocols::InvokeModel::EmbeddingBatches
-      protocol :titan_multimodal_embeddings, Protocols::InvokeModel::TitanMultimodalEmbeddings,
-               batches: Protocols::InvokeModel::EmbeddingBatches
-      protocol :cohere_embeddings, Protocols::InvokeModel::CohereEmbeddings
-      protocol :nova_embeddings, Protocols::InvokeModel::NovaEmbeddings
-      protocol :stability_images, Protocols::InvokeModel::StabilityImages
-      protocol :rerank, Protocols::Bedrock::Rerank
-      protocol :guardrails, Protocols::Bedrock::Guardrails
-      protocol :async_videos, Protocols::Bedrock::AsyncVideos
-      protocol :files, Protocols::Bedrock::Files
+      protocol(:converse, batches: -> { Protocols::Converse::Batches }) { Protocols::Converse }
+      protocol(:mantle_anthropic) { Bedrock::Mantle::Anthropic }
+      protocol(:mantle_responses) { Bedrock::Mantle::Responses }
+      protocol(:mantle_chat_completions) { Bedrock::Mantle::ChatCompletions }
+      protocol(:voxtral_transcription) { Bedrock::Mantle::Voxtral }
+      protocol(:titan_text_embeddings, batches: -> { Protocols::InvokeModel::EmbeddingBatches }) { Protocols::InvokeModel::TitanTextEmbeddings }
+      protocol(:titan_multimodal_embeddings, batches: -> { Protocols::InvokeModel::EmbeddingBatches }) { Protocols::InvokeModel::TitanMultimodalEmbeddings }
+      protocol(:cohere_embeddings) { Protocols::InvokeModel::CohereEmbeddings }
+      protocol(:nova_embeddings) { Protocols::InvokeModel::NovaEmbeddings }
+      protocol(:stability_images) { Protocols::InvokeModel::StabilityImages }
+      protocol(:rerank) { Protocols::Bedrock::Rerank }
+      protocol(:guardrails) { Protocols::Bedrock::Guardrails }
+      protocol(:async_videos) { Protocols::Bedrock::AsyncVideos }
+      protocol(:files) { Protocols::Bedrock::Files }
 
       def self.capabilities
         Bedrock::Capabilities

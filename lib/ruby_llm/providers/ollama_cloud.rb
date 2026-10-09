@@ -9,7 +9,7 @@ module RubyLLM
         include OllamaCloud::Models
       end
 
-      protocol :chat_completions, ChatCompletions
+      protocol(:chat_completions) { ChatCompletions }
 
       def api_base
         @config.ollama_cloud_api_base || 'https://ollama.com/v1'
