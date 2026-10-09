@@ -30,9 +30,9 @@ module RubyLLM
         end
       end
 
-      protocol :chat_completions, ChatCompletions, batches: Protocols::OpenRouter::Batches
-      protocol :responses, Protocols::OpenRouter::Responses
-      protocol :files, Protocols::OpenRouter::Files
+      protocol(:chat_completions, batches: -> { Protocols::OpenRouter::Batches }) { ChatCompletions }
+      protocol(:responses) { Protocols::OpenRouter::Responses }
+      protocol(:files) { Protocols::OpenRouter::Files }
 
       def resolve_protocol(name, model, **request)
         return fetch_protocol(:chat_completions) if !name && request[:operation]

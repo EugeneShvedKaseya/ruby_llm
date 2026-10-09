@@ -6,7 +6,7 @@ RSpec.describe RubyLLM::Chat do
   let(:provider_class) do
     Class.new(RubyLLM::Provider) do
       self.slug = 'custom'
-      protocol :chat_completions, RubyLLM::Protocols::ChatCompletions
+      protocol(:chat_completions) { RubyLLM::Protocols::ChatCompletions }
 
       def api_base = 'https://custom.example/v1'
       def headers = {}
@@ -26,9 +26,12 @@ RSpec.describe RubyLLM::Chat do
   end
 
   before do
-    providers = RubyLLM::Provider.providers.merge(custom: provider_class)
-    allow(RubyLLM::Provider).to receive(:providers).and_return(providers)
+    RubyLLM::Provider.register(:custom, provider_class)
     allow(RubyLLM::Models).to receive(:instance).and_return(RubyLLM::Models.new([model, other_model]))
+  end
+
+  after do
+    RubyLLM::Provider.unregister(:custom)
   end
 
   [false, true].each do |streaming|

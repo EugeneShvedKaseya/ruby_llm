@@ -65,7 +65,7 @@ module RubyLLM
         end
       end
 
-      protocol :chat_completions, ChatCompletions
+      protocol(:chat_completions) { ChatCompletions }
 
       def api_base
         @config.acme_api_base || 'https://api.acme.ai/v1'
@@ -91,7 +91,7 @@ end
 
 That is the real shape of a RubyLLM provider - DeepSeek, Perplexity, and Mistral are all variations on it. Each piece earns its place:
 
-* **`protocol :chat_completions, ChatCompletions`** registers a named protocol. The first protocol you declare becomes the provider's default. Here you subclass the built-in `Protocols::ChatCompletions` so you can later override wire-format seams; if the service is a perfect match you can register `Protocols::ChatCompletions` directly.
+* **`protocol(:chat_completions) { ChatCompletions }`** registers a named protocol. The block is called the first time the protocol is used, so requiring RubyLLM does not load every protocol it ships. The first protocol you declare becomes the provider's default. Here you subclass the built-in `Protocols::ChatCompletions` so you can later override wire-format seams; if the service is a perfect match you can register `Protocols::ChatCompletions` directly.
 * **`api_base`** is the host. RubyLLM hands it straight to Faraday, so a relative endpoint path like `chat/completions` is resolved against it. Reading `@config.acme_api_base` first lets users point at a proxy or self-hosted instance, with a default for the public API.
 * **`headers`** supplies authentication. The base returns `{}`, so this is optional - but nearly every remote service needs it. The hash is merged into every request.
 * **`models_url`** names the model-listing endpoint. Change it when the provider does not expose models at `/models`.
@@ -112,7 +112,7 @@ class Ollama < Provider
     include Ollama::Models
   end
 
-  protocol :chat_completions, ChatCompletions
+  protocol(:chat_completions) { ChatCompletions }
 
   def api_base
     @config.ollama_api_base
@@ -203,9 +203,9 @@ When one service speaks several APIs, register each under a name and override `p
 
 ```ruby
 # lib/ruby_llm/providers/openai.rb (excerpt)
-protocol :responses, Protocols::Responses, batches: Protocols::Responses::Batches
-protocol :chat_completions, Protocols::ChatCompletions, batches: Protocols::ChatCompletions::Batches
-protocol :files, Protocols::OpenAI::Files
+protocol(:responses, batches: -> { Protocols::Responses::Batches }) { Protocols::Responses }
+protocol(:chat_completions, batches: -> { Protocols::ChatCompletions::Batches }) { Protocols::ChatCompletions }
+protocol(:files) { Protocols::OpenAI::Files }
 
 # Audio, realtime, and search-preview models only exist on Chat Completions.
 def protocol_for(model, **)
@@ -221,7 +221,7 @@ RubyLLM.configure do |config|
 end
 ```
 
-The optional `batches:` argument adds batch operations to a protocol. Register a provider-wide Files API as `protocol :files`; file upload, lookup, and download resolve that entry directly rather than routing through `protocol_for`.
+The optional `batches:` argument adds batch operations to a protocol. It takes a lambda, for the same reason the protocol itself takes a block. Register a provider-wide Files API as `protocol :files`; file upload, lookup, and download resolve that entry directly rather than routing through `protocol_for`.
 
 ### Reusing Uploaded Files
 

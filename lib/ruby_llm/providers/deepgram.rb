@@ -4,7 +4,7 @@ module RubyLLM
   module Providers
     # Integrates Deepgram transcription and speech synthesis.
     class Deepgram < Provider
-      protocol :deepgram, Protocols::Deepgram
+      protocol(:deepgram) { Protocols::Deepgram }
 
       def api_base
         @config.deepgram_api_base || 'https://api.deepgram.com'

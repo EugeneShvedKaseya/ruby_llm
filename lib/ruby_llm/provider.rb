@@ -568,46 +568,88 @@ module RubyLLM
         configuration_requirements.all? { |req| config.send(req) }
       end
 
-      # Registers +protocol_class+ under +name+. The first registered
-      # protocol becomes the provider's default. Pass +batches:+ to compose
-      # batch operations into the registered protocol.
+      # Registers the protocol the block returns under +name+. The block is
+      # called the first time the protocol is used, so declaring a provider
+      # does not load the protocols it speaks. The first registered protocol
+      # becomes the provider's default. Pass +batches:+ a lambda returning a
+      # module to compose batch operations into the protocol.
       #
-      #   protocol :chat_completions, ChatCompletions
-      #   protocol :responses, Protocols::Responses, batches: Protocols::Responses::Batches
+      #   protocol(:chat_completions) { ChatCompletions }
+      #   protocol(:responses, batches: -> { Protocols::Responses::Batches }) { Protocols::Responses }
       #
-      def protocol(name, protocol_class, batches: nil)
-        @default_protocol = name.to_sym if protocols.empty?
-        protocols[name.to_sym] = batches ? Class.new(protocol_class) { include batches } : protocol_class
+      def protocol(name, batches: nil, &definition)
+        @default_protocol = name.to_sym if protocol_definitions.empty?
+        protocol_definitions[name.to_sym] = definition
+        batch_definitions[name.to_sym] = batches
+        @protocols = nil
       end
 
       def protocols # :nodoc:
-        @protocols ||= {}
+        @protocols ||= protocol_definitions.to_h { |name, definition| [name, build_protocol(name, definition)] }
+      end
+
+      def protocol_definitions # :nodoc:
+        @protocol_definitions ||= {}
+      end
+
+      def batch_definitions # :nodoc:
+        @batch_definitions ||= {}
       end
 
       # Registers +provider_class+ under the slug +name+, making it
-      # available to RubyLLM.chat and the other top-level helpers.
-      # Stamps the class's slug, adds it to ::providers, and defines a
-      # Configuration accessor for each of its configuration options. A
+      # available to RubyLLM.chat and the other top-level helpers. Pass the
+      # class by name to have it loaded on first use rather than now; its
+      # slug and Configuration accessors are stamped when it loads. A
       # provider gem may pass the path to its bundled model catalog.
       #
+      #   RubyLLM::Provider.register :acme, 'RubyLLM::Providers::Acme'
       #   RubyLLM::Provider.register :acme, RubyLLM::Providers::Acme
-      #   RubyLLM::Provider.register :acme, RubyLLM::Providers::Acme,
+      #   RubyLLM::Provider.register :acme, 'RubyLLM::Providers::Acme',
       #                              models: File.expand_path('../../../models.json', __dir__)
       #
       def register(name, provider_class, models: nil)
-        provider_class.slug = name.to_s
-        providers[name.to_sym] = provider_class
+        registrations[name.to_sym] = provider_class
+        resolved.delete(name.to_sym)
         models ? model_registry_files[name.to_sym] = models : model_registry_files.delete(name.to_sym)
-        RubyLLM::Configuration.register_provider_options(provider_class.configuration_options + [:"#{name}_protocol"])
+      end
+
+      # Removes the provider registered under +name+, with its bundled
+      # catalog. The provider's configuration options stay declared.
+      #
+      #   RubyLLM::Provider.unregister :acme
+      #
+      def unregister(name)
+        name = name.to_sym
+        resolved.delete(name)
+        model_registry_files.delete(name)
+        registrations.delete(name)
+      end
+
+      def registrations # :nodoc:
+        @registrations ||= {}
+      end
+
+      # The slug of the registered provider that +option+ belongs to, or
+      # +nil+. The longest matching slug wins, so ollama_cloud_api_base
+      # belongs to ollama_cloud rather than ollama.
+      def slug_for_option(option) # :nodoc:
+        name = option.to_s
+        registrations.keys.select { |slug| name.start_with?("#{slug}_") }.max_by(&:length)
       end
 
       def resolve(name) # :nodoc:
-        providers[name.to_sym]
+        name = name.to_sym
+        return resolved[name] if resolved.key?(name)
+
+        registration = registrations[name]
+        return unless registration
+
+        resolved[name] = finish_registration(name, registration)
       end
 
       def resolve!(name) # :nodoc:
-        providers[name.to_sym] ||
-          raise(Error, "Unknown provider: #{name.inspect}. Available providers: #{providers.keys.join(', ')}")
+        resolve(name) ||
+          raise(Error, "Unknown provider: #{name.inspect}. Available providers: #{registrations.keys.join(', ')}")
       end
 
       # Resolves +model_id+ to the id the registry stores it under for this
@@ -625,9 +667,23 @@ module RubyLLM
       end
 
       # Returns the global registry of providers, a hash mapping slug
-      # symbols to provider classes.
+      # symbols to provider classes. Resolving it loads every registered
+      # provider; ::resolve loads one.
       def providers
-        @providers ||= {}
+        resolve_all
+        resolved
+      end
+
+      # Loads every registered provider. Repeated calls are cheap: only a
+      # registration added since the last one is resolved.
+      def resolve_all # :nodoc:
+        return if resolved.size == registrations.size
+
+        registrations.each_key { |slug| resolve(slug) }
+      end
+
+      def resolved # :nodoc:
+        @resolved ||= {}
       end
 
       def model_registry_files # :nodoc:
@@ -652,6 +708,24 @@ module RubyLLM
         providers.select do |_slug, provider_class|
           provider_class.remote? && provider_class.configured?(config)
         end.values
+      end
+
+      private
+
+      def finish_registration(slug, registration)
+        provider_class = registration.is_a?(Module) ? registration : Object.const_get(registration)
+        provider_class.slug = slug.to_s
+        RubyLLM::Configuration.register_provider_options(
+          provider_class.configuration_options + [:"#{slug}_protocol"]
+        )
+        provider_class
+      end
+
+      def build_protocol(name, definition)
+        protocol_class = definition.call
+        batches = batch_definitions[name]
+        batches = batches.call if batches.respond_to?(:call)
+        batches ? Class.new(protocol_class) { include batches } : protocol_class
       end
     end
 

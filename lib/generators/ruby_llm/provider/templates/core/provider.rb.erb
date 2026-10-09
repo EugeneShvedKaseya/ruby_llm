@@ -7,7 +7,7 @@ module RubyLLM
       class <%= protocol_class_name %> < <%= protocol_superclass %>
       end
 
-      protocol :<%= protocol_name %>, <%= protocol_class_name %>
+      protocol(:<%= protocol_name %>) { <%= protocol_class_name %> }
 
       def api_base
         @config.<%= api_base_config %> || '<%= api_base %>'

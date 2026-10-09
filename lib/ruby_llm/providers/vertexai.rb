@@ -4,17 +4,17 @@ module RubyLLM
   module Providers
     # Google Vertex AI implementation
     class VertexAI < Provider
-      protocol :gemini, VertexAI::Gemini, batches: VertexAI::Gemini::Batches
-      protocol :anthropic, VertexAI::Anthropic, batches: VertexAI::Anthropic::Batches
-      protocol :mistral, VertexAI::Mistral
-      protocol :chat_completions, VertexAI::ChatCompletions, batches: VertexAI::ChatCompletions::Batches
-      protocol :embed_content, VertexAI::EmbedContent
-      protocol :embedding_prediction, Protocols::VertexAI::EmbeddingPrediction
-      protocol :transcription, VertexAI::Transcription
-      protocol :live_transcription, VertexAI::LiveTranscription
-      protocol :ranking, Protocols::VertexAI::Ranking
-      protocol :research, Protocols::VertexAI::Research
-      protocol :files, Protocols::VertexAI::Files
+      protocol(:gemini, batches: -> { VertexAI::Gemini::Batches }) { VertexAI::Gemini }
+      protocol(:anthropic, batches: -> { VertexAI::Anthropic::Batches }) { VertexAI::Anthropic }
+      protocol(:mistral) { VertexAI::Mistral }
+      protocol(:chat_completions, batches: -> { VertexAI::ChatCompletions::Batches }) { VertexAI::ChatCompletions }
+      protocol(:embed_content) { VertexAI::EmbedContent }
+      protocol(:embedding_prediction) { Protocols::VertexAI::EmbeddingPrediction }
+      protocol(:transcription) { VertexAI::Transcription }
+      protocol(:live_transcription) { VertexAI::LiveTranscription }
+      protocol(:ranking) { Protocols::VertexAI::Ranking }
+      protocol(:research) { Protocols::VertexAI::Research }
+      protocol(:files) { Protocols::VertexAI::Files }
 
       SCOPES = [
         'https://www.googleapis.com/auth/cloud-platform',

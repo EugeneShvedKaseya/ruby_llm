@@ -542,7 +542,7 @@ RSpec.describe RubyLLM::Models do
       dynamic_provider = Class.new(RubyLLM::Provider) do
         const_set(:ChatCompletions, chat_completions)
 
-        protocol :chat_completions, chat_completions
+        protocol(:chat_completions) { chat_completions }
 
         def api_base
           'https://dynamic.example.test/v1'
@@ -568,7 +568,7 @@ RSpec.describe RubyLLM::Models do
     end
 
     after do
-      RubyLLM::Provider.providers.delete(:remote_dynamic)
+      RubyLLM::Provider.unregister(:remote_dynamic)
     end
 
     it 'delegates to the class method when called on instance' do

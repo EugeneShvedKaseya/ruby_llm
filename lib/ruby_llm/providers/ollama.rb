@@ -16,8 +16,8 @@ module RubyLLM
         include Ollama::Judgments
       end
 
-      protocol :chat_completions, ChatCompletions
-      protocol :system_one, SystemOne
+      protocol(:chat_completions) { ChatCompletions }
+      protocol(:system_one) { SystemOne }
 
       def api_base
         @config.ollama_api_base

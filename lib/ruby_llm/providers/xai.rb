@@ -4,9 +4,9 @@ module RubyLLM
   module Providers
     # xAI API integration
     class XAI < Provider
-      protocol :responses, XAI::Responses
-      protocol :chat_completions, ChatCompletions, batches: XAI::ChatCompletions::Batches
-      protocol :files, Protocols::XAI::Files
+      protocol(:responses) { XAI::Responses }
+      protocol(:chat_completions, batches: -> { XAI::ChatCompletions::Batches }) { ChatCompletions }
+      protocol(:files) { Protocols::XAI::Files }
 
       def api_base
         @config.xai_api_base || 'https://api.x.ai/v1'

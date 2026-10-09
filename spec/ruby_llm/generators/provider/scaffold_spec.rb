@@ -49,7 +49,7 @@ RSpec.describe RubyLLM::Generators::Provider::Scaffold do
       provider = File.read(File.join(dir, 'lib/ruby_llm/providers/acme_cloud.rb'))
       expect(provider).to include("require 'ruby_llm'")
       expect(provider).to include('class AcmeCloud < Provider')
-      expect(provider).to include('protocol :chat_completions, ChatCompletions')
+      expect(provider).to include('protocol(:chat_completions) { ChatCompletions }')
       expect(provider).to include("def models_url\n          'models'")
       expect(provider).to include('def assume_models_exist?')
       expect(provider).to include('RubyLLM::Provider.register :acme_cloud, RubyLLM::Providers::AcmeCloud')
