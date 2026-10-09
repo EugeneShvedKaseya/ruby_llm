@@ -32,6 +32,9 @@ module RubyLLM
 
           @values[key.to_sym] = value
         end
+
+        @values.freeze
+        freeze
       end
 
       ##

@@ -14,6 +14,9 @@ module RubyLLM
   class Model
     include Support::Inspectable
 
+    POOL = Support::Interner.new # :nodoc:
+    private_constant :POOL
+
     # The provider's identifier for the model, e.g. <tt>"gpt-5.6"</tt>.
     attr_reader :id
 
@@ -38,21 +41,24 @@ module RubyLLM
     # The model's training data cutoff as a Date, or +nil+.
     attr_reader :knowledge_cutoff
 
-    # The supported input and output modalities as a Model::Modalities object.
+    # The supported input and output modalities as a frozen Model::Modalities
+    # object, shared with every model that supports the same ones.
     #
     #   model.modalities.input   # => ["text", "image", "pdf"]
     #   model.modalities.output  # => ["text"]
     #
     attr_reader :modalities
 
-    # The model's capability names as an array of Strings,
-    # e.g. <tt>["function_calling", "streaming"]</tt>.
+    # The model's capability names as a frozen array of Strings,
+    # e.g. <tt>["function_calling", "streaming"]</tt>, shared with every model
+    # that reports the same ones.
     attr_reader :capabilities
 
-    # The model's pricing as a Model::Pricing object, in USD per million tokens.
+    # The model's pricing as a frozen Model::Pricing object, in USD per million
+    # tokens, shared with every model priced the same way.
     attr_reader :pricing
 
-    # Provider-specific metadata as a Hash.
+    # Provider-specific metadata as a frozen Hash.
     attr_reader :metadata
 
     # The time the configured provider stopped listing the model, as a UTC
@@ -74,21 +80,21 @@ module RubyLLM
     end
 
     def initialize(data) # :nodoc:
+      source_metadata = data[:metadata] || {}
       @id = data[:id]
       @name = data[:name]
-      @provider = data[:provider]
-      @family = data[:family]
+      @provider = POOL.intern(data[:provider])
+      @family = POOL.intern(data[:family])
       @created_at = Support::Utils.to_time(data[:created_at])&.utc
       @context_window = data[:context_window]
       @max_output_tokens = data[:max_output_tokens]
       @knowledge_cutoff = Support::Utils.to_date(data[:knowledge_cutoff])
-      @modalities = Modalities.new(data[:modalities] || {})
-      @capabilities = data[:capabilities] || []
-      @metadata = data[:metadata]&.dup || {}
+      @modalities = shared_modalities(data[:modalities])
+      @capabilities = POOL.intern(data[:capabilities] || [])
+      @reasoning_options = POOL.intern(normalize_reasoning_options(reasoning_options_from(data, source_metadata)))
+      @metadata = POOL.intern(metadata_with_reasoning_options(source_metadata))
       @unlisted_at = Support::Utils.to_time(data[:unlisted_at])&.utc
-      @pricing = Pricing.new(pricing_data_with_long_context(data[:pricing] || {}))
-      @reasoning_options = normalize_reasoning_options(reasoning_options_from(data))
-      store_reasoning_options_metadata
+      @pricing = shared_pricing(data[:pricing])
     end
 
     # Returns whether #capabilities includes +capability+, given as a String
@@ -207,6 +213,14 @@ module RubyLLM
 
     private
 
+    def shared_modalities(modalities)
+      POOL.shared(:modalities, modalities || {}) { |source| Modalities.new(source) }
+    end
+
+    def shared_pricing(pricing)
+      POOL.shared(:pricing, pricing_data_with_long_context(pricing || {})) { |rates| Pricing.new(rates) }
+    end
+
     def pricing_data_with_long_context(pricing)
       pricing = RubyLLM::Support::Utils.deep_symbolize_keys(RubyLLM::Support::Utils.deep_dup(pricing))
       text = pricing[:text_tokens] || {}
@@ -220,15 +234,17 @@ module RubyLLM
       pricing
     end
 
-    def reasoning_options_from(data)
+    def reasoning_options_from(data, metadata)
       data[:reasoning_options] || metadata[:reasoning_options] || metadata['reasoning_options']
     end
 
-    def store_reasoning_options_metadata
-      return unless reasoning_options.any?
+    def metadata_with_reasoning_options(metadata)
+      return metadata if reasoning_options.empty?
 
+      metadata = metadata.dup
       metadata.delete('reasoning_options')
       metadata[:reasoning_options] = reasoning_options
+      metadata
     end
 
     def normalize_reasoning_options(options)

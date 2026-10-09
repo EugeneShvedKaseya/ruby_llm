@@ -45,6 +45,8 @@ Each registry entry describes the model:
 
 This registry allows RubyLLM to validate models, route requests correctly, provide capability information, and offer convenient filtering.
 
+Registry entries are read-only. A model's capabilities, modalities, pricing, and metadata come back frozen, and models that describe the same thing share one copy of it, so a registry of two thousand models costs a fraction of what a private copy per model would. Build a new Hash or Array from what you read instead of changing one in place.
+
 Browse all registered models on the [Models]({% link _reference/available-models.md %}) page.
 
 ## Refreshing the Registry

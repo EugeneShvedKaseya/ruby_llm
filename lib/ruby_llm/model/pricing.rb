@@ -21,6 +21,9 @@ module RubyLLM
         CATEGORIES.each do |category|
           @data[category] = PricingCategory.new(data[category]) if data[category] && !empty_pricing?(data[category])
         end
+
+        @data.freeze
+        freeze
       end
 
       # Returns the PricingCategory for text token prices, or an empty
