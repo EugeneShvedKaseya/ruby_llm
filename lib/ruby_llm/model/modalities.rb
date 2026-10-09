@@ -19,8 +19,9 @@ module RubyLLM
       attr_reader :output
 
       def initialize(data) # :nodoc:
-        @input = Array(data[:input]).map(&:to_s)
-        @output = Array(data[:output]).map(&:to_s)
+        @input = POOL.intern(Array(data[:input]).map(&:to_s))
+        @output = POOL.intern(Array(data[:output]).map(&:to_s))
+        freeze
       end
 
       # Returns the modalities as a Hash with +:input+ and +:output+ keys.

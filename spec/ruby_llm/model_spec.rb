@@ -71,6 +71,68 @@ RSpec.describe RubyLLM::Model do
     end
   end
 
+  describe 'shared registry values' do
+    subject(:twin) { described_class.new(RubyLLM::Support::Utils.deep_dup(data).merge(id: 'gpt-5-mini')) }
+
+    it 'shares the capabilities array between equal models' do
+      expect(twin.capabilities).to equal(model.capabilities)
+    end
+
+    it 'shares modalities between equal models' do
+      expect(twin.modalities).to equal(model.modalities)
+    end
+
+    it 'shares pricing between equal models' do
+      expect(twin.pricing).to equal(model.pricing)
+    end
+
+    it 'shares metadata between equal models' do
+      expect(twin.metadata).to equal(model.metadata)
+    end
+
+    it 'shares metadata subtrees between models that differ elsewhere' do
+      other = described_class.new(
+        RubyLLM::Support::Utils.deep_dup(data).merge(id: 'o4', name: 'O4', metadata: { description: 'A test model' })
+      )
+
+      expect(other.metadata[:description]).to equal(model.metadata[:description])
+    end
+
+    it 'shares the provider string' do
+      expect(twin.provider).to equal(model.provider)
+    end
+
+    it 'freezes the values it shares' do
+      expect(model.capabilities).to be_frozen
+      expect(model.metadata).to be_frozen
+      expect(model.modalities).to be_frozen
+      expect(model.pricing).to be_frozen
+      expect(model.reasoning_options).to be_frozen
+    end
+
+    it 'leaves the data it was built from unfrozen' do
+      model
+
+      expect(data).not_to be_frozen
+      expect(data[:metadata]).not_to be_frozen
+      expect(data[:capabilities]).not_to be_frozen
+    end
+
+    it 'keeps distinct values distinct' do
+      other = described_class.new(data.merge(capabilities: %w[streaming]))
+
+      expect(other.capabilities).to eq(%w[streaming])
+    end
+
+    it 'keeps empty modalities and empty pricing apart' do
+      bare = described_class.new(id: 'bare', name: 'Bare', provider: 'openai')
+
+      expect(bare.modalities).to be_a(RubyLLM::Model::Modalities)
+      expect(bare.pricing).to be_a(RubyLLM::Model::Pricing)
+      expect(bare.modalities.to_h).to eq(input: [], output: [])
+    end
+  end
+
   describe '.default' do
     subject(:default_model) { described_class.default('my-custom-model', 'openai') }
 
