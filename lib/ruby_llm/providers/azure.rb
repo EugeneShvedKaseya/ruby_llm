@@ -8,10 +8,10 @@ module RubyLLM
       DEFAULT_EMBEDDINGS_API_VERSION = '2024-05-01-preview'
       DEFAULT_MODELS_API_VERSION = 'preview'
 
-      protocol :chat_completions, Azure::ChatCompletions, batches: Azure::ChatCompletions::Batches
-      protocol :responses, Azure::Responses
-      protocol :files, Protocols::Azure::Files
-      protocol :cohere, Azure::Cohere
+      protocol(:chat_completions, batches: -> { Azure::ChatCompletions::Batches }) { Azure::ChatCompletions }
+      protocol(:responses) { Azure::Responses }
+      protocol(:files) { Protocols::Azure::Files }
+      protocol(:cohere) { Azure::Cohere }
 
       def original_image_detail? # :nodoc:
         true

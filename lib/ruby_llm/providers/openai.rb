@@ -4,12 +4,11 @@ module RubyLLM
   module Providers
     # OpenAI API integration.
     class OpenAI < Provider
-      protocol :responses, OpenAI::Responses, batches: Protocols::Responses::Batches
-      protocol :chat_completions, Protocols::ChatCompletions, batches: Protocols::ChatCompletions::Batches
-      protocol :embeddings, Protocols::ChatCompletions,
-               batches: Protocols::ChatCompletions::EmbeddingBatches
-      protocol :files, Protocols::OpenAI::Files
-      protocol :decisions, Protocols::OpenAI::Decisions
+      protocol(:responses, batches: -> { Protocols::Responses::Batches }) { OpenAI::Responses }
+      protocol(:chat_completions, batches: -> { Protocols::ChatCompletions::Batches }) { Protocols::ChatCompletions }
+      protocol(:embeddings, batches: -> { Protocols::ChatCompletions::EmbeddingBatches }) { Protocols::ChatCompletions }
+      protocol(:files) { Protocols::OpenAI::Files }
+      protocol(:decisions) { Protocols::OpenAI::Decisions }
 
       RATE_LIMIT_RESET_HEADERS = %w[x-ratelimit-reset-requests x-ratelimit-reset-tokens].freeze
       RESET_DURATION_UNITS = { 'h' => 3600, 'm' => 60, 's' => 1, 'ms' => 0.001 }.freeze

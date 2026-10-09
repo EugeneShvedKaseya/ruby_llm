@@ -4,10 +4,10 @@ module RubyLLM
   module Providers
     # Native Gemini API implementation
     class Gemini < Provider
-      protocol :gemini, Protocols::Gemini, batches: Protocols::Gemini::Batches
-      protocol :interactions, Protocols::Interactions
-      protocol :live_transcription, Protocols::Gemini::LiveTranscription
-      protocol :files, Protocols::Gemini::Files
+      protocol(:gemini, batches: -> { Protocols::Gemini::Batches }) { Protocols::Gemini }
+      protocol(:interactions) { Protocols::Interactions }
+      protocol(:live_transcription) { Protocols::Gemini::LiveTranscription }
+      protocol(:files) { Protocols::Gemini::Files }
 
       def protocol_for(model, operation: nil, **)
         return protocols[:interactions] if operation == :transcribe && model.id == 'gemini-3.5-transcribe'

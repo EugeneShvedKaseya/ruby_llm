@@ -9,7 +9,7 @@ module RubyLLM
         include Hetzner::Chat
       end
 
-      protocol :chat_completions, ChatCompletions
+      protocol(:chat_completions) { ChatCompletions }
 
       def api_base
         @config.hetzner_api_base || 'https://inference.hetzner.com/api/v1'

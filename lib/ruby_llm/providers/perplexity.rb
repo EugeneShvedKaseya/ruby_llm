@@ -11,10 +11,10 @@ module RubyLLM
         include Perplexity::Models
       end
 
-      protocol :chat_completions, ChatCompletions
-      protocol :router_chat_completions, Protocols::Perplexity::Router
-      protocol :files, Protocols::Perplexity::Files
-      protocol :agent_responses, Protocols::Perplexity::Agent
+      protocol(:chat_completions) { ChatCompletions }
+      protocol(:router_chat_completions) { Protocols::Perplexity::Router }
+      protocol(:files) { Protocols::Perplexity::Files }
+      protocol(:agent_responses) { Protocols::Perplexity::Agent }
 
       def api_base
         @config.perplexity_api_base || 'https://api.perplexity.ai'

@@ -44,6 +44,18 @@ module RubyLLM
         Array(options).each { |key| option(key, nil) }
       end
 
+      # Declares the options of the provider that +key+ belongs to, by
+      # loading that provider. Returns whether +key+ is declared after it.
+      def declare_provider_option(key) # :nodoc:
+        return false if options.include?(key)
+
+        slug = Provider.slug_for_option(key)
+        return false unless slug
+
+        Provider.resolve(slug)
+        options.include?(key)
+      end
+
       # Returns the names of all declared options as an array of symbols,
       # including options registered by providers.
       def options
@@ -55,6 +67,18 @@ module RubyLLM
       def option_keys = @option_keys ||= []
       def defaults = @defaults ||= {}
       private :option
+    end
+
+    def method_missing(name, *args)
+      key = name.to_s.delete_suffix('=').to_sym
+      return super unless self.class.declare_provider_option(key)
+
+      public_send(name, *args)
+    end
+
+    def respond_to_missing?(name, include_private = false)
+      key = name.to_s.delete_suffix('=').to_sym
+      self.class.declare_provider_option(key) || super
     end
 
     # System-level options are declared here.

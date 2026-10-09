@@ -4,7 +4,7 @@ module RubyLLM
   module Providers
     # Connects TypeSafe's judgment models to RubyLLM.
     class TypeSafe < Provider
-      protocol :system_one, Protocols::SystemOne
+      protocol(:system_one) { Protocols::SystemOne }
 
       def api_base
         @config.typesafe_api_base || 'https://api.typesafe.ai'
