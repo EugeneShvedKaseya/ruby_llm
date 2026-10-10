@@ -160,8 +160,17 @@ module RubyLLM
 
     private
 
+    # Builds the one Hash it returns, rather than a pair array per entry
+    # and a Hash per step, because every Message builds a Tokens.
     def positive_counts(counts)
-      used = counts.to_h.to_h { |key, count| [key.to_s, count.to_i] }.select { |_, count| count.positive? }
+      counts = counts.to_h unless counts.nil?
+      return if counts.nil? || counts.empty?
+
+      used = {}
+      counts.each do |key, count|
+        count = count.to_i
+        used[key.to_s] = count if count.positive?
+      end
       used unless used.empty?
     end
   end

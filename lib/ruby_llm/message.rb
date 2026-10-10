@@ -107,8 +107,8 @@ module RubyLLM
       )
       @raw = options[:raw]
       @thinking = coerce_thinking(options[:thinking], options[:thinking_signature])
-      @citations = Array(options[:citations]).map { |citation| coerce_value(citation, Citation) }
-      @server_tool_calls = Array(options[:server_tool_calls]).map { |call| coerce_value(call, ServerToolCall) }
+      @citations = coerce_list(options[:citations], Citation)
+      @server_tool_calls = coerce_list(options[:server_tool_calls], ServerToolCall)
       @raw_content = options[:raw_content]
       @raw_reasoning = options[:raw_reasoning]
       @mcp_result = coerce_mcp_result(options[:mcp_result])
@@ -331,6 +331,14 @@ module RubyLLM
 
     def coerce_value(value, klass)
       value.is_a?(Hash) ? klass.from_h(value) : value
+    end
+
+    # Asks nothing of +values+ but whether it is nil: an Active Record
+    # association answers empty? with a query.
+    def coerce_list(values, klass)
+      return [] if values.nil?
+
+      Array(values).map { |value| coerce_value(value, klass) }
     end
 
     def coerce_mcp_result(value)
