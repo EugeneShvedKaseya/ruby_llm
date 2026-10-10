@@ -4,6 +4,8 @@ require 'spec_helper'
 
 # rubocop:disable-next RSpec/DescribeClass
 RSpec.describe 'allocations on the hot path' do
+  include_context 'with configured RubyLLM'
+
   # Counts objects created by the block, the way "The Complete Guide to Rails
   # Performance" does: stop the collector, diff ObjectSpace, put it back.
   def allocated_in(*types)
@@ -57,6 +59,43 @@ RSpec.describe 'allocations on the hot path' do
                                    citations: [{ 'title' => 'T', 'url' => 'https://example.test' }])
 
     expect(message.citations.first).to be_a(RubyLLM::Citation)
+  end
+
+  def chat_with(turns)
+    chat = RubyLLM.chat(model: 'gpt-4.1')
+    chat.with_instructions('terse')
+    turns.times do |index|
+      chat.add_message(role: :user, content: "question #{index}")
+      chat.add_message(role: :assistant, content: "answer #{index}")
+    end
+    chat
+  end
+
+  it 'builds a request transcript without an array per message' do
+    chat = chat_with(10)
+    chat.send(:request_history, chat.messages)
+
+    arrays = allocated_in(:T_ARRAY) { chat.send(:request_history, chat.messages) }
+
+    expect(arrays - baseline(:T_ARRAY)).to be < chat.messages.size
+  end
+
+  it 'builds a request transcript at a cost that does not grow with the transcript' do
+    short = chat_with(3)
+    long = chat_with(20)
+    [short, long].each { |chat| chat.send(:request_history, chat.messages) }
+
+    short_arrays = allocated_in(:T_ARRAY) { short.send(:request_history, short.messages) }
+    long_arrays = allocated_in(:T_ARRAY) { long.send(:request_history, long.messages) }
+
+    expect(long_arrays - short_arrays).to be <= 2
+  end
+
+  it 'keeps the transcript a request is built from' do
+    chat = chat_with(3)
+
+    expect(chat.send(:request_history, chat.messages).map(&:content))
+      .to eq(chat.messages.map(&:content))
   end
 
   it 'resolves the configured protocol option without building its name again' do
