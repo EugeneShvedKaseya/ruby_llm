@@ -472,7 +472,12 @@ module RubyLLM
 
     class << self
       attr_reader :default_protocol # :nodoc:
-      attr_writer :slug # :nodoc:
+
+      # Setting the slug invalidates the option name derived from it.
+      def slug=(value) # :nodoc:
+        @protocol_option = nil
+        @slug = value
+      end
 
       # Returns the provider slug, a short lowercase string that
       # identifies the provider and prefixes its configuration keys.
@@ -582,6 +587,12 @@ module RubyLLM
         protocol_definitions[name.to_sym] = definition
         batch_definitions[name.to_sym] = batches
         @protocols = nil
+      end
+
+      # The name of the Configuration option that overrides this provider's
+      # protocol, built once per provider.
+      def protocol_option # :nodoc:
+        @protocol_option ||= :"#{slug}_protocol"
       end
 
       def protocols # :nodoc:
@@ -781,7 +792,7 @@ module RubyLLM
     end
 
     def configured_protocol
-      @config.send(:"#{slug}_protocol")
+      @config.send(self.class.protocol_option)
     end
 
     def fetch_protocol(name)
