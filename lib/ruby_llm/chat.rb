@@ -1387,6 +1387,12 @@ module RubyLLM
     # is: the loop runs its calls or waits on them.
     def request_history(list)
       kept = list.reject { |message| blank_response?(message) }
+      return kept unless kept.any? { |message| message.tool_call? || message.tool_result? }
+
+      with_unfinished_results(kept)
+    end
+
+    def with_unfinished_results(kept)
       answered = kept.filter_map { |message| message.tool_call_id if message.tool_result? }
       current = latest_response(kept)
       kept.slice_before { |message| !message.tool_result? }.flat_map do |response, *results|
@@ -1827,9 +1833,10 @@ module RubyLLM
     # A blank response answers nothing, so it never hides the round before
     # it, as the placeholder of a process that died after a tool finished.
     def latest_response(list)
-      list.reverse.find do |message|
-        message.role != :system && !message.tool_result? && !blank_response?(message)
+      list.reverse_each do |message|
+        return message if message.role != :system && !message.tool_result? && !blank_response?(message)
       end
+      nil
     end
 
     def blank_response?(message)
